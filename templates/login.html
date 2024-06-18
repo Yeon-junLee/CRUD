@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#login-form').on('submit', function(event) {
+                event.preventDefault();
+                const username = $('#username').val();
+                const password = $('#password').val();
+                $.ajax({
+                    url: '/api/login',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ username, password }),
+                    success: function(response) {
+                        window.location.href = '/';
+                    },
+                    error: function(response) {
+                        alert(response.responseJSON.error);
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>로그인</h1>
+    <form id="login-form">
+        <label for="username">사용자 이름</label>
+        <input type="text" id="username" name="username">
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" name="password">
+        <button type="submit">로그인</button>
+    </form>
+    <a href="{{ url_for('register_page') }}">회원가입</a>
+</body>
+</html>
