@@ -10,17 +10,22 @@
                 event.preventDefault();
                 const username = $('#username').val();
                 const password = $('#password').val();
+
+                console.log(username)
+                console.log(password)
                 $.ajax({
-                    url: '/api/register',
+                    url: '/api/signup',
                     method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ username, password }),
+                    data: {'uid':username, 'pwd':password},
                     success: function(response) {
-                        window.location.href = '/';
+                        if(response['result'] == 'success') {
+                            alert('회원가입 성공')
+                            window.location.href = '/';
+                        }
+                        else {
+                            alert('회원가입 실패')
+                        }
                     },
-                    error: function(response) {
-                        alert(response.responseJSON.error);
-                    }
                 });
             });
         });

@@ -13,17 +13,23 @@
                 $.ajax({
                     url: '/api/login',
                     method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ username, password }),
+                    data: {'uid':username, 'pwd':password},
                     success: function(response) {
-                        window.location.href = '/';
+                        if(response['result'] == 'success') {
+                            alert('로그인 성공')
+                            window.location.href = '/toMain';
+                        }
+                        else {
+                            alert('로그인 실패')
+                        }
                     },
-                    error: function(response) {
-                        alert(response.responseJSON.error);
-                    }
                 });
             });
         });
+
+        function signUpPage() {
+            window.location.href = '/toSignUp'
+        }
     </script>
 </head>
 <body>
@@ -35,6 +41,6 @@
         <input type="password" id="password" name="password">
         <button type="submit">로그인</button>
     </form>
-    <a href="{{ url_for('register_page') }}">회원가입</a>
+    <button onclick="signUpPage()" class="button is-primary">회원가입</button>
 </body>
 </html>
