@@ -7,8 +7,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function() {
-            const userId = user;  // 사용자 ID를 JavaScript 변수에 저장
-
+            const userId = "{{ user }}";  // 사용자 ID를 JavaScript 변수에 저장
             fetchPosts();
 
             $('#create-form').on('submit', function(event) {
@@ -18,8 +17,7 @@
                 $.ajax({
                     url: '/api/posts',
                     method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ userId, title, content }),
+                    data: {'uid':userId, 'title':title, 'content':content},
                     success: function(response) {
                         $('#create-modal').hide();
                         fetchPosts();
@@ -29,21 +27,84 @@
                     }
                 });
             });
+
+            $('#logout-button').on('click', function(event) {
+                event.preventDefault();
+                console.log("로그아웃 버튼 누름");
+                $.ajax({
+                    url: '/api/logout',
+                    method: 'GET',
+                    success: function(response) {
+                        window.location.href = '/toLogIn';
+                    },
+                    error: function(response) {
+                        alert('Logout failed');
+                    }
+                });
+            });
+
+            $('#edit-form').on('submit', function(event) {
+                // event.preventDefault();
+                console.log("수정 버튼 클릭!");
+                editPost();
+            });
+
+            $('#comment-form').on('submit', function(event) {
+                event.preventDefault();
+                addComment();
+            });
         });
 
         function fetchPosts() {
             $.ajax({
                 url: '/api/posts',
                 method: 'GET',
+                data: {},
                 success: function(posts) {
                     const postList = $('#post-list');
                     postList.empty();
                     posts.forEach(post => {
                         postList.append(`
                             <li>
-                                <h2><a href="/post/${post._id}">${post.title}</a></h2>
-                                <p>${post.content.slice(0, 100)}...</p>
-                                <p>작성자: ${post.userId}</p>
+                                <h2 onclick="viewPost('${post._id}', '${encodeURIComponent(post.title)}', '${encodeURIComponent(post.content)}', '${post.uid}')">${post.title}</h2>
+                                <p>${post.content.length > 20 ? post.content.substring(0, 20) + '...' : post.content}</p>
+                                <p>작성자: ${post.uid}</p>
+                            </li>
+                        `);
+                    });
+                },
+            });
+        }
+
+
+        function viewPost(id, title, content, author) {
+            $('#view-title').text(decodeURIComponent(title));
+            $('#view-content').text(decodeURIComponent(content));
+            $('#view-author').text(`작성자: ${author}`);
+            $('#view-title').data('post-id', id);   // 게시글의 ID를 저장
+            $('#view-post-modal').show();
+            $('#edit-button').off('click').on('click', function() {
+                openEditModal(id, decodeURIComponent(title), decodeURIComponent(content));
+                closeViewPostModal()
+            });
+            $('#delete-button').off('click').on('click', function() {
+                deletePost(id);
+            });
+            fetchComments(id);
+        }
+
+        function fetchComments(postId) {
+            $.ajax({
+                url: `/api/posts/${postId}/comments`,
+                method: 'GET',
+                success: function(comments) {
+                    const commentList = $('#comment-list');
+                    commentList.empty();
+                    comments.forEach(comment => {
+                        commentList.append(`
+                            <li>
+                                <p>${comment.content}</p>
+                                <p>작성자: ${comment.uid}</p>
                             </li>
                         `);
                     });
@@ -54,6 +115,68 @@
             });
         }
 
+        function addComment() {
+            const postId = $('#view-title').data('post-id');
+            const content = $('#comment-content').val();
+            $.ajax({
+                url: `/api/posts/${postId}/comments`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ content }),
+                success: function(response) {
+                    $('#comment-content').val('');
+                    fetchComments(postId);
+                },
+                error: function(response) {
+                    alert(response.responseJSON.error);
+                }
+            });
+        }
+
+        function openEditModal(id, title, content) {
+            $('#edit-id').val(id);
+            $('#edit-title').val(title);
+            $('#edit-content').val(content);
+            $('#edit-modal').show();
+        }
+
+        function editPost() {
+            const id = $('#edit-id').val();
+            const title = $('#edit-title').val();
+            const content = $('#edit-content').val();
+            $.ajax({
+                url: '/api/posts/${id}',
+                method: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({ title, content }),
+                success: function(response) {
+                    $('#edit-modal').hide();
+                    fetchPosts();
+                    $('#view-post-modal').hide();
+                },
+                error: function(response) {
+                    alert(response.responseJSON.error);
+                }
+            });
+        }
+
+        function deletePost(id) {
+            if (confirm('정말로 이 글을 삭제하시겠습니까?')) {
+                console.log("삭제를 위해 DELETE 메소드로 보냅니다")
+                $.ajax({
+                    url: `/api/posts/${id}`,
+                    method: 'DELETE',
+                    success: function(response) {
+                        fetchPosts();
+                        $('#view-post-modal').hide();
+                    },
+                    error: function(response) {
+                        alert(response.responseJSON.error);
+                    }
+                });
+            }
+        }
+
         function openCreateModal() {
             $('#create-modal').show();
         }
@@ -61,12 +184,20 @@
         function closeCreateModal() {
             $('#create-modal').hide();
         }
+
+        function closeEditModal() {
+            $('#edit-modal').hide();
+        }
+
+        function closeViewPostModal() {
+            $('#view-post-modal').hide();
+        }
     </script>
 </head>
 <body>
     <h1>게시판</h1>
-    <p>안녕하세요, {{ user }}!</p>
-    <a href="{{ url_for('logout') }}">로그아웃</a>
+    <p>안녕하세요, <strong>{{ user }}</strong>!</p>
+    <button id="logout-button">로그아웃</button>
     <button onclick="openCreateModal()">새 글 작성</button>
     <ul id="post-list"></ul>
 
@@ -85,6 +216,42 @@
             </form>
         </div>
     </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>글 수정</h2>
+            <form id="edit-form">
+                <label for="edit-title">제목</label>
+                <input type="text" id="edit-title" name="title" style="width: 100%;">
+
+                <label for="edit-content">내용</label>
+                <textarea id="edit-content" name="content" style="width: 100%; height: 300px;"></textarea>
+                
+                <button type="submit">수정</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="view-post-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeViewPostModal()">&times;</span>
+            <h2 id="view-title"></h2>
+            <p id="view-content"></p>
+            <p id="view-author"></p>
+            <div>
+                <h3>댓글</h3>
+                <ul id="comment-list"></ul>
+                <form id="comment-form">
+                    <textarea id="comment-content" style="width: 100%; height: 100px;"></textarea>
+                    <button type="submit">댓글 달기</button>
+                </form>
+            </div>
+            <button id="edit-button">수정</button>
+            <button id="delete-button">삭제</button>
+        </div>
+    </div>
+
 
     <style>
         /* Modal CSS */
