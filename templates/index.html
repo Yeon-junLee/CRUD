@@ -145,8 +145,8 @@
             const title = $('#edit-title').val();
             const content = $('#edit-content').val();
             $.ajax({
-                url: '/api/posts/${id}',
-                method: 'PUT',
+                url: `/api/posts/${id}`,
+                method: 'PATCH',
                 contentType: 'application/json',
                 data: JSON.stringify({ title, content }),
                 success: function(response) {

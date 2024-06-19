@@ -1,4 +1,5 @@
 from bson import ObjectId
+from bson.errors import InvalidId
 from pymongo import MongoClient
 
 from flask import Flask, render_template, jsonify, request, session
@@ -89,17 +90,23 @@ def handle_posts():
         post_id = db.posts_collection.insert_one({'uid': uid, 'title': title, 'content': content}).inserted_id
         return jsonify({'result':'success'})
 
-@app.route('/api/posts/<id>', methods=['PUT'])
+@app.route('/api/posts/<id>', methods=['PATCH'])
 def update_post(id):
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized access'}), 401
     
     user_id = session['user']
     data = request.json
-    post = db.posts_collection.find_one({'_id': ObjectId(id)})
+    
+    try:
+        post_id = ObjectId(id)
+    except InvalidId:
+        return jsonify({'error' : 'invalid post ID'}), 400
+    
+    post = db.posts_collection.find_one({'_id': post_id})
     print("수정될까?")
-    if post and post['userId'] == user_id:
-        db.posts_collection.update_one({'_id': ObjectId(id)}, {'$set': {'title': data['title'], 'content': data['content']}})
+    if post and post['uid'] == user_id:
+        db.posts_collection.update_one({'_id': post_id}, {'$set': {'title': data['title'], 'content': data['content']}})
         return jsonify({'message': 'Post updated successfully'})
     else:
         return jsonify({'error': 'You are not authorized to update this post'}), 403
