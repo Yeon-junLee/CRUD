@@ -40,6 +40,9 @@ def toLogIn():
 @app.route('/api/signup', methods=['POST'])
 def signup():
     uid = request.form['uid']
+    if(db.users.find_one({'uid':uid})):
+        return jsonify({'result':'failure', 'msg':'중복된 아이디가 존재합니다.'})
+    
     pwd_input = request.form['pwd']
     pwd = hashlib.sha256(pwd_input.encode('utf-8')).hexdigest()
     # 해쉬 함수 sha256을 이용해 암호화
